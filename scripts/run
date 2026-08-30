@@ -29,3 +29,9 @@ kubectl port-forward svc/prometheus 9090:9090 -n observability
 
 # Grafana UI (Dashboards)
 kubectl port-forward svc/grafana 3000:3000 -n observability
+
+
+# run load test
+k6 run load-test.js
+
+k6 run --out influxdb=http://localhost:8086/k6db load-test.js # para exportar datos

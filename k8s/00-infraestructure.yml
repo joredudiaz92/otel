@@ -201,7 +201,7 @@ spec:
   selector:
     app: otel-collector
 ---
-# --- PROMETHEUS CONFIG ---
+# --- PROMETHEUS CONFIGMAP (REGLAS DE ALERTA) ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -211,10 +211,49 @@ data:
   prometheus.yml: |
     global:
       scrape_interval: 5s
+      evaluation_interval: 5s
+
+    rule_files:
+      - /etc/prometheus/alert.rules.yml
+
     scrape_configs:
       - job_name: 'otel-collector'
         static_configs:
           - targets: ['otel-collector.observability.svc.cluster.local:8889']
+
+  alert.rules.yml: |
+    groups:
+      - name: microservices_alerts
+        rules:
+          # Alerta Latencia P95 > 500ms
+          - alert: HighLatencyP95
+            expr: histogram_quantile(0.95, sum(rate(http_server_duration_milliseconds_bucket[1m])) by (le, service_name)) > 500
+            for: 30s
+            labels:
+              severity: warning
+            annotations:
+              summary: "Latencia P95 alta en {{ $labels.service_name }}"
+              description: "El percentil 95 de latencia ha superado los 500ms (Valor actual: {{ $value }}ms)."
+
+          # Alerta uso de CPU > 70%
+          - alert: HighCpuUsage
+            expr: rate(process_cpu_seconds_total[1m]) * 100 > 70
+            for: 30s
+            labels:
+              severity: critical
+            annotations:
+              summary: "Uso de CPU alto en {{ $labels.service_name }}"
+              description: "El servicio {{ $labels.service_name }} superó el 70% de consumo de CPU."
+
+          # Alerta uso de Memoria > 70% (Heap respecto a límite asignado/máximo)
+          - alert: HighMemoryUsage
+            expr: (process_resident_memory_bytes / 1024 / 1024) > 350 # Ejemplo de umbral alto para pods de Node.js
+            for: 30s
+            labels:
+              severity: warning
+            annotations:
+              summary: "Uso de Memoria elevado en {{ $labels.service_name }}"
+              description: "El servicio {{ $labels.service_name }} está consumiendo memoria sobre el umbral configurado."
 ---
 # --- PROMETHEUS DEPLOYMENT ---
 apiVersion: apps/v1
@@ -235,12 +274,13 @@ spec:
       containers:
       - name: prometheus
         image: prom/prometheus:latest
-        args: ["--config.file=/etc/prometheus/prometheus.yml"]
+        args:
+          - "--config.file=/etc/prometheus/prometheus.yml"
+        ports:
+        - containerPort: 9090
         volumeMounts:
         - name: config
           mountPath: /etc/prometheus
-        ports:
-        - containerPort: 9090
       volumes:
       - name: config
         configMap:
@@ -256,6 +296,137 @@ spec:
   - port: 9090
   selector:
     app: prometheus
+---
+# --- GRAFANA PROVISIONING: DATASOURCES ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: observability
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus.observability.svc.cluster.local:9090
+        isDefault: true
+---
+# --- GRAFANA PROVISIONING: DASHBOARD PROVIDER ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  namespace: observability
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'Default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+# --- GRAFANA PROVISIONING: DASHBOARD COMPLETO (JSON) ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-json
+  namespace: observability
+data:
+  services-overview.json: |
+    {
+      "editable": true,
+      "panels": [
+        {
+          "title": "Tasa de Peticiones HTTP por Servicio (req/sec)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "Prometheus" },
+              "expr": "sum(rate(http_server_duration_milliseconds_count[1m])) by (service_name)",
+              "legendFormat": "{{service_name}}"
+            }
+          ]
+        },
+        {
+          "title": "Percentiles de Latencia HTTP (p50, p95, p99) en ms",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "Prometheus" },
+              "expr": "histogram_quantile(0.50, sum(rate(http_server_duration_milliseconds_bucket[1m])) by (le, service_name))",
+              "legendFormat": "p50 - {{service_name}}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "Prometheus" },
+              "expr": "histogram_quantile(0.95, sum(rate(http_server_duration_milliseconds_bucket[1m])) by (le, service_name))",
+              "legendFormat": "p95 - {{service_name}}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "Prometheus" },
+              "expr": "histogram_quantile(0.99, sum(rate(http_server_duration_milliseconds_bucket[1m])) by (le, service_name))",
+              "legendFormat": "p99 - {{service_name}}"
+            }
+          ]
+        },
+        {
+          "title": "Uso de CPU por Servicio (%)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "Prometheus" },
+              "expr": "rate(process_cpu_seconds_total[1m]) * 100",
+              "legendFormat": "{{service_name}}"
+            }
+          ]
+        },
+        {
+          "title": "Uso de Memoria (RAM) por Servicio (MB)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "Prometheus" },
+              "expr": "process_resident_memory_bytes / 1024 / 1024",
+              "legendFormat": "{{service_name}}"
+            }
+          ]
+        },
+        {
+          "title": "Efectivo E/S Red por Servicio (Bytes/sec)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "Prometheus" },
+              "expr": "sum(rate(http_server_request_size_bytes_sum[1m])) by (service_name)",
+              "legendFormat": "Entrada (Rx) - {{service_name}}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "Prometheus" },
+              "expr": "sum(rate(http_server_response_size_bytes_sum[1m])) by (service_name)",
+              "legendFormat": "Salida (Tx) - {{service_name}}"
+            }
+          ]
+        }
+      ],
+      "refresh": "5s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["microservices", "otel", "resources"],
+      "time": { "from": "now-15m", "to": "now" },
+      "title": "Microservicios - Observabilidad OTel + Recursos",
+      "uid": "otel-microservices-resources"
+    }
 ---
 # --- GRAFANA DEPLOYMENT ---
 apiVersion: apps/v1
@@ -278,6 +449,23 @@ spec:
         image: grafana/grafana:latest
         ports:
         - containerPort: 3000
+        volumeMounts:
+        - name: datasources
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: dashboard-provider
+          mountPath: /etc/grafana/provisioning/dashboards
+        - name: dashboards-json
+          mountPath: /var/lib/grafana/dashboards
+      volumes:
+      - name: datasources
+        configMap:
+          name: grafana-datasources
+      - name: dashboard-provider
+        configMap:
+          name: grafana-dashboard-provider
+      - name: dashboards-json
+        configMap:
+          name: grafana-dashboards-json
 ---
 apiVersion: v1
 kind: Service
