@@ -9,7 +9,7 @@ minikube dashboard
 
 minikube -p minikube docker-env ||  minikube -p minikube docker-env | Invoke-Expression (windows)
 docker build -t service-a:latest .
-kubectl rollout restart deployment/tu-deployment
+kubectl rollout restart deployment/service-a -n observability
 minikube image load # en ocasiones no carga al minikube
 # verificar que se cambie el nombre de la imagen en 01-apps.yaml
 

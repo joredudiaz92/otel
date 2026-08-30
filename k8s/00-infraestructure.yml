@@ -227,33 +227,33 @@ data:
         rules:
           # Alerta Latencia P95 > 500ms
           - alert: HighLatencyP95
-            expr: histogram_quantile(0.95, sum(rate(http_server_duration_milliseconds_bucket[1m])) by (le, service_name)) > 500
+            expr: histogram_quantile(0.95, sum by (le, service, route, exported_job) (rate(http_client_request_duration_seconds_bucket[1m]))) > 500
             for: 30s
             labels:
               severity: warning
             annotations:
-              summary: "Latencia P95 alta en {{ $labels.service_name }}"
+              summary: "Latencia P95 alta en {{ $labels.exported_job }}"
               description: "El percentil 95 de latencia ha superado los 500ms (Valor actual: {{ $value }}ms)."
 
           # Alerta uso de CPU > 70%
           - alert: HighCpuUsage
-            expr: rate(process_cpu_seconds_total[1m]) * 100 > 70
+            expr: rate(system_cpu_utilization[1m]) * 100 > 70
             for: 30s
             labels:
               severity: critical
             annotations:
-              summary: "Uso de CPU alto en {{ $labels.service_name }}"
-              description: "El servicio {{ $labels.service_name }} superó el 70% de consumo de CPU."
+              summary: "Uso de CPU alto en {{ $labels.exported_job }}"
+              description: "El servicio {{ $labels.exported_job }} superó el 70% de consumo de CPU."
 
           # Alerta uso de Memoria > 70% (Heap respecto a límite asignado/máximo)
           - alert: HighMemoryUsage
-            expr: (process_resident_memory_bytes / 1024 / 1024) > 350 # Ejemplo de umbral alto para pods de Node.js
+            expr: (system_memory_usage / 1024 / 1024) > 350 # Ejemplo de umbral alto para pods de Node.js
             for: 30s
             labels:
               severity: warning
             annotations:
-              summary: "Uso de Memoria elevado en {{ $labels.service_name }}"
-              description: "El servicio {{ $labels.service_name }} está consumiendo memoria sobre el umbral configurado."
+              summary: "Uso de Memoria elevado en {{ $labels.exported_job }}"
+              description: "El servicio {{ $labels.exported_job }} está consumiendo memoria sobre el umbral configurado."
 ---
 # --- PROMETHEUS DEPLOYMENT ---
 apiVersion: apps/v1
@@ -350,8 +350,8 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "sum(rate(http_server_duration_milliseconds_count[1m])) by (service_name)",
-              "legendFormat": "{{service_name}}"
+              "expr": "sum by (exported_job) (rate(http_client_request_duration_seconds_count[1m]))",
+              "legendFormat": "{{exported_job}}"
             }
           ]
         },
@@ -362,18 +362,18 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "histogram_quantile(0.50, sum(rate(http_server_duration_milliseconds_bucket[1m])) by (le, service_name))",
-              "legendFormat": "p50 - {{service_name}}"
+              "expr": "histogram_quantile(0.50, sum by (le, service, route, exported_job) (rate(http_client_request_duration_seconds_bucket[1m])))",
+              "legendFormat": "p50 - {{exported_job}}"
             },
             {
               "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "histogram_quantile(0.95, sum(rate(http_server_duration_milliseconds_bucket[1m])) by (le, service_name))",
-              "legendFormat": "p95 - {{service_name}}"
+              "expr": "histogram_quantile(0.95, sum by (le, service, route, exported_job) (rate(http_client_request_duration_seconds_bucket[1m])))",
+              "legendFormat": "p95 - {{exported_job}}"
             },
             {
               "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "histogram_quantile(0.99, sum(rate(http_server_duration_milliseconds_bucket[1m])) by (le, service_name))",
-              "legendFormat": "p99 - {{service_name}}"
+              "expr": "histogram_quantile(0.99, sum by (le, service, route, exported_job) (rate(http_client_request_duration_seconds_bucket[1m])))",
+              "legendFormat": "p99 - {{exported_job}}"
             }
           ]
         },
@@ -384,8 +384,8 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "rate(process_cpu_seconds_total[1m]) * 100",
-              "legendFormat": "{{service_name}}"
+              "expr": "rate(system_cpu_utilization[1m]) * 100",
+              "legendFormat": "{{exported_job}}"
             }
           ]
         },
@@ -396,8 +396,8 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "process_resident_memory_bytes / 1024 / 1024",
-              "legendFormat": "{{service_name}}"
+              "expr": "system_memory_usage / 1024 / 1024",
+              "legendFormat": "{{exported_job}}"
             }
           ]
         },
@@ -408,13 +408,8 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "sum(rate(http_server_request_size_bytes_sum[1m])) by (service_name)",
-              "legendFormat": "Entrada (Rx) - {{service_name}}"
-            },
-            {
-              "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "sum(rate(http_server_response_size_bytes_sum[1m])) by (service_name)",
-              "legendFormat": "Salida (Tx) - {{service_name}}"
+              "expr": "sum(rate(system_network_io_total[1m])) by (exported_job)",
+              "legendFormat": "Transmitidos (Rx) - {{exported_job}}"
             }
           ]
         }

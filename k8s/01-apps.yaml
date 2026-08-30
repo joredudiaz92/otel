@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: service-b
-        image: service-b:v5
+        image: service-b:v20
         imagePullPolicy: Never
         env:
         - name: DB_HOST
@@ -55,7 +55,7 @@ spec:
     spec:
       containers:
       - name: service-a
-        image: service-a:v5
+        image: service-a:v20
         imagePullPolicy: Never
         env:
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -93,7 +93,7 @@ spec:
     spec:
       containers:
       - name: service-c
-        image: service-c:v1
+        image: service-c:v20
         imagePullPolicy: Never
         env:
         - name: OTEL_SERVICE_NAME
