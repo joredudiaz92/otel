@@ -1,0 +1,16 @@
+﻿apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: latency-service-b
+  namespace: observability
+spec:
+  action: delay
+  mode: all
+  selector:
+    labelSelectors:
+      app: "service-b"
+  delay:
+    latency: '200ms'
+    correlation: '100'
+  direction: to
+  duration: '5m'

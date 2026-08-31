@@ -35,3 +35,12 @@ kubectl port-forward svc/grafana 3000:3000 -n observability
 k6 run load-test.js
 
 k6 run --out influxdb=http://localhost:8086/k6db load-test.js # para exportar datos
+
+# Crear chaos mesh
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-chaos-mesh.ps1
+
+# chequear que el experimento se ejecuto correctamente
+kubectl describe networkchaos latency-service-b -n observability
+
+# borrar el experimento
+kubectl delete -f .\chaos-experiments\chaos-latency-service-b.yaml

@@ -1,0 +1,37 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  namespace: observability
+  name: account-observability-manager-amaip
+
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: observability
+  name: role-observability-manager-amaip
+rules:
+- apiGroups: [""]
+  resources: ["pods", "namespaces", "services", "replicationcontrollers"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: ["chaos-mesh.org"]
+  resources: [ "*" ]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bind-observability-manager-amaip
+  namespace: observability
+subjects:
+- kind: ServiceAccount
+  name: account-observability-manager-amaip
+  namespace: observability
+roleRef:
+  kind: Role
+  name: role-observability-manager-amaip
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,15 @@
+﻿apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: error-rate-service-c
+  namespace: observability
+spec:
+  mode: all
+  selector:
+    labelSelectors:
+      app: "service-c"
+  target: Request
+  port: 8080
+  abort: true
+  percentage: 10
+  duration: '5m'

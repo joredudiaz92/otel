@@ -237,7 +237,7 @@ data:
 
           # Alerta uso de CPU > 70%
           - alert: HighCpuUsage
-            expr: rate(system_cpu_utilization[1m]) * 100 > 70
+            expr: (avg by (exported_job) (system_cpu_utilization{state!="idle"}) * 100) > 70
             for: 30s
             labels:
               severity: critical
@@ -247,7 +247,7 @@ data:
 
           # Alerta uso de Memoria > 70% (Heap respecto a límite asignado/máximo)
           - alert: HighMemoryUsage
-            expr: (system_memory_usage / 1024 / 1024) > 350 # Ejemplo de umbral alto para pods de Node.js
+            expr: ((sum by (exported_job) (system_memory_usage{system_memory_state="used"})) / 1024 / 1024) > 3500 # Ejemplo de umbral alto para pods de Node.js
             for: 30s
             labels:
               severity: warning
@@ -384,7 +384,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "rate(system_cpu_utilization[1m]) * 100",
+              "expr": "avg by (exported_job) (system_cpu_utilization{state!='idle'}) * 100",
               "legendFormat": "{{exported_job}}"
             }
           ]
@@ -396,7 +396,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "system_memory_usage / 1024 / 1024",
+              "expr": "(sum by (exported_job) (system_memory_usage{system_memory_state='used'})) / 1024 / 1024",
               "legendFormat": "{{exported_job}}"
             }
           ]
