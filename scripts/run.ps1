@@ -1,7 +1,7 @@
 minikube start --memory=4096 --cpus=3
 
-kubectl apply -f 00-infrastructure.yaml
-kubectl apply -f 01-apps.yaml
+kubectl apply -f k8s\00-infraestructure.yml
+kubectl apply -f k8s\01-apps.yaml
 
 kubectl get pods -n observability
 
