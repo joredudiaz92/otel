@@ -9,7 +9,7 @@ spec:
     labelSelectors:
       app: "service-c"
   target: Request
-  port: 8080
+  port: 8082
   abort: true
   percentage: 10
   duration: '5m'
