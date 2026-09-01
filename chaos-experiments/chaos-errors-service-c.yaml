@@ -8,8 +8,8 @@ spec:
   selector:
     labelSelectors:
       app: "service-c"
-  target: Request
+  target: Response     # IMPORTANTE: Cambiado a Response para poder alterar el código de salida
   port: 8080
-  abort: true
-  percentage: 10
   duration: '5m'
+  replace:
+    code: 500          # CORRECCIÓN: Se usa 'code' en lugar de 'statusCode'

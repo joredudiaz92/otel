@@ -350,7 +350,17 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "Prometheus" },
-              "expr": "sum by (exported_job) (rate(http_client_request_duration_seconds_count[1m]))",
+              "expr": "(http_client_request_duration_seconds_count{exported_job='service-a'})",
+              "legendFormat": "{{exported_job}}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "Prometheus" },
+              "expr": "rate(http_server_request_duration_seconds_count{exported_job='service-b'})",
+              "legendFormat": "{{exported_job}}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "Prometheus" },
+              "expr": "rate(http_server_duration_milliseconds_count{exported_job='service-c'}) * 1000",
               "legendFormat": "{{exported_job}}"
             }
           ]

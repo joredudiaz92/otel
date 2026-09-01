@@ -91,7 +91,6 @@ Write-Host "Archivos YAML de caos creados en la carpeta 'chaos-experiments/'." -
 
 Write-Host "`n=== [PROCESO COMPLETADO] ===" -ForegroundColor Green
 Write-Host "Para aplicar los experimentos ejecuta:" -ForegroundColor Yellow
-Write-Host "  kubectl apply -f chaos-experiments/chaos-latency-service-b.yaml -n observability"
 Write-Host "`nCopia el token para el dashboard de chaos mesh" -ForegroundColor Yellow
 Write-Host "  kubectl -n observability create token account-observability-manager-amaip"
 Write-Host "  kubectl apply -f chaos-experiments/chaos-latency-service-b.yaml -n observability"

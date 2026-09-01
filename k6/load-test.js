@@ -30,7 +30,7 @@ export default function () {
   switch (serviceSelector) {
     case 1:
       // Servicio A: Requiere ID de producto
-      res = http.get(`http://localhost:8080/products/${randomProductId}`);
+      res = http.get(`http://localhost:8080/productos/${randomProductId}`);
       check(res, {
         'Servicio A HTTP 200': (r) => r.status === 200,
       });
@@ -38,7 +38,7 @@ export default function () {
 
     case 2:
       // Servicio B: Requiere ID de producto
-      res = http.get(`http://localhost:8081/products/${randomProductId}`);
+      res = http.get(`http://localhost:8081/productos/${randomProductId}`);
       check(res, {
         'Servicio B HTTP 200': (r) => r.status === 200,
       });
@@ -46,7 +46,7 @@ export default function () {
 
     case 3:
       // Servicio C: Consulta directa sin ID
-      res = http.get('http://localhost:8082/products');
+      res = http.get('http://localhost:8082/productos');
       check(res, {
         'Servicio C HTTP 200': (r) => r.status === 200,
       });
